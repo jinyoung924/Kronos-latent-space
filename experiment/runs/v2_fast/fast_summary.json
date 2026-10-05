@@ -1,0 +1,217 @@
+{
+  "model": "base",
+  "noises_done": [
+    "ou"
+  ],
+  "q0": [
+    {
+      "item": "data_fingerprint",
+      "v1": "d8e4765c83adf538",
+      "v2": "d8e4765c83adf538",
+      "ok": true,
+      "criterion": "완전 일치"
+    },
+    {
+      "item": "입력단 LDR (close 기울기)",
+      "v1": 19.57,
+      "v2": 19.569,
+      "ok": true,
+      "criterion": "소수 둘째 자리까지"
+    },
+    {
+      "item": "held-out LDR layer 0, mid",
+      "v1": 22.99,
+      "v2": 22.99,
+      "ok": true,
+      "criterion": "상대오차 5% 이내"
+    },
+    {
+      "item": "held-out LDR layer 1, mid",
+      "v1": 29.27,
+      "v2": 29.27,
+      "ok": true,
+      "criterion": "상대오차 5% 이내"
+    },
+    {
+      "item": "held-out LDR layer 11, late",
+      "v1": 23.76,
+      "v2": 23.76,
+      "ok": true,
+      "criterion": "상대오차 5% 이내"
+    },
+    {
+      "item": "held-out LDR layer 11, last",
+      "v1": 23.52,
+      "v2": 23.53,
+      "ok": true,
+      "criterion": "상대오차 5% 이내"
+    },
+    {
+      "item": "null 대비 배율",
+      "v1": 987,
+      "v2": 988.0,
+      "ok": true,
+      "criterion": "같은 자릿수"
+    },
+    {
+      "item": "평활 LDR 정점 위치 (레이어 중앙값)",
+      "v1": "259~350",
+      "v2": 350,
+      "ok": true,
+      "criterion": "1차 범위 안"
+    },
+    {
+      "item": "cos(mean, median)",
+      "v1": 0.978,
+      "v2": 0.9814,
+      "ok": true,
+      "criterion": "차이 0.01 이내"
+    },
+    {
+      "item": "cos(LDA, median)",
+      "v1": 0.04,
+      "v2": 0.0438,
+      "ok": true,
+      "criterion": "차이 0.01 이내"
+    },
+    {
+      "item": "A 팔 lambda=0.25 양의 기울기 (subset32)",
+      "v1": "100%",
+      "v2": "32/32",
+      "ok": true,
+      "criterion": "상향 분류·유의성(p<0.01) 동일"
+    },
+    {
+      "item": "A 팔이 상향되는 최소 lambda (subset32)",
+      "v1": 0.25,
+      "v2": 0.25,
+      "ok": true,
+      "criterion": "동일"
+    },
+    {
+      "item": "A 팔 최소 분산비 (subset32)",
+      "v1": 0.046,
+      "v2": 0.0511,
+      "ok": true,
+      "criterion": "같은 자릿수"
+    },
+    {
+      "item": "기준선 양의 기울기 비율 (subset32)",
+      "v1": 0.469,
+      "v2": "15/32",
+      "ok": null,
+      "criterion": "v1 도 GPU 에 따라 0.594 / 0.469 로 갈렸다"
+    },
+    {
+      "item": "REF 양의 기울기 비율 (subset32)",
+      "v1": 0.0,
+      "v2": "0/32",
+      "ok": true,
+      "criterion": "+-2/32"
+    }
+  ],
+  "q1": {
+    "ou": {
+      "summary": {
+        "layer": 11,
+        "t": 511,
+        "pretrained": 23.52788543701172,
+        "random_init": 23.972028732299805,
+        "random_init_torch": 2.6203505992889404,
+        "input": 13.945891380310059,
+        "pretrained_over_random": 0.9814724360525378,
+        "pretrained_over_random_torch": 8.97890741925766,
+        "pretrained_over_input": 1.68708365750147,
+        "band_mean": {
+          "pretrained": 20.399563186308917,
+          "random_init": 20.91194577778087,
+          "random_init_torch": 7.119658827781677,
+          "input": 11.755860146354227,
+          "pretrained_over_random": 0.9754980910472538,
+          "pretrained_over_random_torch": 2.8652444842873117,
+          "pretrained_over_input": 1.7352675969554903
+        }
+      },
+      "key": "like_random",
+      "sentence": "분리는 입력·구조에서 오며, 학습된 표현이라는 근거 없음"
+    }
+  },
+  "fast": {
+    "ou": {
+      "A_up": true,
+      "lambda_star": 0.25,
+      "verdict": "direction_specific",
+      "collapse_generic": false,
+      "ref_match": false,
+      "j_frac_positive_mean_at_star": 0.4947916666666667,
+      "j_var_ratio_mean_at_star": 0.5795787764813779,
+      "reversible": false,
+      "baseline": {
+        "n": 64,
+        "n_positive": 31,
+        "frac_positive": 0.484375,
+        "p_sign": 0.9006532462520334,
+        "frac_negative": 0.515625,
+        "p_sign_negative": 0.9006532462520334,
+        "var_ratio": 1.0,
+        "slope_mean": -0.0008549181424250553
+      },
+      "baseline_subset32": {
+        "n": 32,
+        "n_positive": 15,
+        "frac_positive": 0.46875,
+        "p_sign": 0.860050065908581,
+        "frac_negative": 0.53125,
+        "p_sign_negative": 0.860050065908581,
+        "var_ratio": 1.0,
+        "slope_mean": 0.00030080944744980504
+      },
+      "ref": {
+        "n": 64,
+        "n_positive": 0,
+        "frac_positive": 0.0,
+        "p_sign": 1.0842021724855044e-19,
+        "frac_negative": 1.0,
+        "p_sign_negative": 1.0842021724855044e-19,
+        "var_ratio": 0.6505782158548309,
+        "slope_mean": -0.06431251128307604
+      },
+      "ref_subset32": {
+        "n": 32,
+        "n_positive": 0,
+        "frac_positive": 0.0,
+        "p_sign": 4.656612873077393e-10,
+        "frac_negative": 1.0,
+        "p_sign_negative": 4.656612873077393e-10,
+        "var_ratio": 0.818989562045313,
+        "slope_mean": -0.06377784368726833
+      }
+    }
+  },
+  "interpretation": {
+    "ou": {
+      "key": "specific_unlike_ref",
+      "sentence": "방향 특이적 조정은 가능하나, 모델이 실제 추세 입력에 하는 계산과 다른 출력을 주입 (1차 OU 잠정 결론)"
+    }
+  },
+  "q1_ratio": 2.0,
+  "meta": {
+    "code_commit": "83ebf62d2298e6589409d97cdaff4d860e62b62c",
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "torch": "2.14.1+cu130",
+    "cuda": "13.0",
+    "steps": {
+      "00_stage0": 30.8,
+      "ou_01_stage1": 18.6,
+      "ou_02_stage2": 107.1,
+      "ou_03_stage2_randinit": 72.1,
+      "ou_03b_stage2_randinit_torch": 57.4,
+      "ou_04_stage3": 128.9,
+      "ou_05_stage4": 42.4,
+      "ou_06_clean_scratch": 2.1,
+      "ou_07_stage5_fast": 1810.6,
+      "ou_08_stage5_ref": 130.4,
+      "ou_09_stage6": 26.6
+    }
+  }
+}

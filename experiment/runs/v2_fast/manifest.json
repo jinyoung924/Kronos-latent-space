@@ -1,0 +1,133 @@
+{
+  "started_utc": "2026-10-05T06:09:08+00:00",
+  "run_id": "v2_fast",
+  "plan": "fast",
+  "model": "base",
+  "code_commit": "83ebf62d2298e6589409d97cdaff4d860e62b62c",
+  "kronos_dir_commit": "08c3a2cfd67dbebe31973af01206cf56750c7bf2",
+  "model_id": "NeoQuasar/Kronos-base",
+  "model_revision": "2b554741eca47781b64468546e77fef3e85130e6",
+  "tokenizer_id": "NeoQuasar/Kronos-Tokenizer-base",
+  "tokenizer_revision": "0e0117387f39004a9016484a186a908917e22426",
+  "config": {
+    "tag": "v2",
+    "model": {
+      "tokenizer_id": "NeoQuasar/Kronos-Tokenizer-base",
+      "model_id": "NeoQuasar/Kronos-base",
+      "max_context": 512,
+      "clip": 5.0,
+      "revision": "2b554741eca47781b64468546e77fef3e85130e6",
+      "tokenizer_revision": "0e0117387f39004a9016484a186a908917e22426"
+    },
+    "data": {
+      "T": 512,
+      "n_micro": 15,
+      "sigma": 0.01,
+      "noise_type": "ou",
+      "ou_theta": 0.01,
+      "snr_min": 3.0,
+      "snr_max": 6.0,
+      "base_level": 100.0,
+      "n_samples": 2048,
+      "seed": 20250812,
+      "zero_volume": true,
+      "freq_minutes": 5,
+      "start_time": "2024-01-01 09:00:00"
+    },
+    "probe": {
+      "extract_batch_size": 16,
+      "store_dtype": "float16",
+      "shrinkage": 0.001,
+      "test_ratio": 0.3
+    },
+    "steer": {
+      "methods": [
+        "median",
+        "mean",
+        "lda"
+      ],
+      "lambdas_rel": [
+        0.0,
+        0.05,
+        0.1,
+        0.15,
+        0.25,
+        0.35,
+        0.5,
+        1.0
+      ],
+      "pred_len": 64,
+      "sample_count": 5,
+      "temperature": 1.0,
+      "top_k": 0,
+      "top_p": 0.9,
+      "lambdas_rel_fast": [
+        0.0,
+        0.1,
+        0.15,
+        0.25,
+        0.5
+      ],
+      "n_eval_fast": 64,
+      "eval_batch": 32
+    },
+    "control": {
+      "random_seeds": [
+        0,
+        1,
+        2
+      ],
+      "random_init_seed": 0,
+      "band_positions": [
+        0,
+        32,
+        64,
+        96,
+        128,
+        160,
+        192,
+        224,
+        256,
+        288,
+        320,
+        352,
+        384,
+        416,
+        448,
+        480,
+        511
+      ]
+    }
+  },
+  "config_hash": "9941f1651e4f",
+  "env": {
+    "python": "3.12.3",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "hostname": "5acab31e100e",
+    "pod_id": "5gpra7mrb66q1e",
+    "torch": "2.14.1+cu130",
+    "cuda": "13.0",
+    "gpu_name": "NVIDIA GeForce RTX 4090",
+    "driver": "580.178.04"
+  },
+  "updated_utc": "2026-10-05T06:49:54+00:00",
+  "noises": [
+    "ou",
+    "rw"
+  ],
+  "steps": {
+    "00_stage0": 30.8,
+    "ou_01_stage1": 18.6,
+    "ou_02_stage2": 107.1,
+    "ou_03_stage2_randinit": 72.1,
+    "ou_03b_stage2_randinit_torch": 57.4,
+    "ou_04_stage3": 128.9,
+    "ou_05_stage4": 42.4,
+    "ou_06_clean_scratch": 2.1,
+    "ou_07_stage5_fast": 1810.6,
+    "ou_08_stage5_ref": 130.4,
+    "ou_09_stage6": 26.6,
+    "ou_10_summary": 0.6
+  },
+  "status": "running"
+}
