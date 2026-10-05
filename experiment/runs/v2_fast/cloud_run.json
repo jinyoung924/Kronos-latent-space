@@ -19,5 +19,8 @@
   "repo_dir": "/workspace/Kronos-latent-space",
   "pred_dir": "/workspace/Kronos-latent-space/experiment/runs/v2_fast",
   "scratch_dir": "/root/kexp_scratch/v2_fast",
-  "status": "running"
+  "status": "ok",
+  "exit_code": 0,
+  "finished_utc": "2026-10-05T07:31:18+00:00",
+  "elapsed_min": 82.8
 }

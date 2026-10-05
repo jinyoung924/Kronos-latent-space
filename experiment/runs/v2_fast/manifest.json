@@ -110,7 +110,7 @@
     "gpu_name": "NVIDIA GeForce RTX 4090",
     "driver": "580.178.04"
   },
-  "updated_utc": "2026-10-05T07:31:06+00:00",
+  "updated_utc": "2026-10-05T07:31:17+00:00",
   "noises": [
     "ou",
     "rw"
@@ -140,5 +140,6 @@
     "rw_09_stage6": 25.9,
     "rw_10_summary": 0.6
   },
-  "status": "running"
+  "status": "ok",
+  "finished_utc": "2026-10-05T07:31:17+00:00"
 }
