@@ -1,6 +1,6 @@
 # Fast track 요약 — run `v2_fast`
 
-모델 `base`, 끝난 노이즈: ['ou']
+모델 `base`, 끝난 노이즈: ['ou', 'rw']
 
 ## Q0. v1(Colab) OU 결과가 재현되는가
 
@@ -63,9 +63,47 @@
 
 해석 (outline 8.2): **방향 특이적 조정은 가능하나, 모델이 실제 추세 입력에 하는 계산과 다른 출력을 주입 (1차 OU 잠정 결론)**
 
+## 노이즈 `rw`
+
+### Q1. 선형 분리가 사전학습으로 생긴 것인가
+
+| held-out LDR | 입력 기준선 | 무작위 (Kronos 초기화) | 무작위 (torch 기본, 참고) | 사전학습 | 사전학습/무작위 | 사전학습/무작위(torch, 참고) | 사전학습/입력 |
+|---|---|---|---|---|---|---|---|
+| layer 11, t=511 | 1.69 | 10.24 | 6.16 | 15.74 | 1.54 | 2.56 | 9.31 |
+| layer 11, band 평균 | 1.74 | 8.52 | 4.91 | 12.52 | 1.47 | 2.55 | 7.21 |
+
+판정에는 Kronos 자체 초기화 대조군의 비율(사전학습/무작위)만 쓴다. torch 기본 초기화는 블록이 residual 에 거의 기여하지 않아 토큰 임베딩에 가까운 대조군이라 참고로만 둔다.
+
+해석 (outline 8.1, t=511 기준, 비율 0.5~2 을 '비슷'으로 봄): **분리는 입력·구조에서 오며, 학습된 표현이라는 근거 없음**
+
+### Q2·Q3. steering 효과가 S 방향에 특이적인가, 역방향도 작동하는가
+
+| λ_rel | A 양의 비율 (p) | A 분산비 | J seed별 양의 비율 | J 평균 | J 분산비 평균 | L 음의 비율 (p) | L 분산비 |
+|---|---|---|---|---|---|---|---|
+| 0.1 | 85.9% (3.5e-09) | 0.075 | 50% / 44% / 48% | 47.4% | 0.997 | 56.2% (3.8e-01) | 0.396 |
+| 0.15 | 84.4% (2.0e-08) | 0.073 | 50% / 42% / 50% | 47.4% | 0.978 | 57.8% (2.6e-01) | 0.250 |
+| 0.25 | 84.4% (2.0e-08) | 0.069 | 50% / 39% / 48% | 45.8% | 0.911 | 59.4% (1.7e-01) | 0.158 |
+| 0.5 | 85.9% (3.5e-09) | 0.067 | 47% / 36% / 47% | 43.2% | 0.469 | 60.9% (1.0e-01) | 0.136 |
+
+표본 수 64. 분산비는 표준편차의 비(개입 후 / 기준선). J 의 |cos(R, S)| 레이어 평균: 0.0272, 0.0279, 0.0273.
+
+### Q4. 목표 분포(REF)와의 대조
+
+- REF(진짜 trend 입력, 개입 없음) 양의 기울기 비율: 50.0% (32/64)
+- 기준선(base 입력, 개입 없음): 48.4%
+- λ* = None 에서 A vs REF 의 KS p: -
+
+### 판정 (spec 2.2, 사전 고정)
+
+| A_up | λ* | 판정 | λ* 에서 J 평균 | collapse_generic | reversible | ref_match |
+|---|---|---|---|---|---|---|
+| False | None | `no_effect` | - | None | False | None |
+
+해석 (outline 8.2): **해당 설정에서 인과적 사용의 증거 없음**
+
 ## 실행 메타
 
 - code commit `83ebf62d2298e6589409d97cdaff4d860e62b62c`, plan `fast`
 - 모델 `NeoQuasar/Kronos-base` @ `2b554741eca47781b64468546e77fef3e85130e6`
 - GPU NVIDIA GeForce RTX 4090 (driver 580.178.04), torch 2.14.1+cu130, CUDA 13.0
-- 단계별 소요: 00_stage0 31s, ou_01_stage1 19s, ou_02_stage2 107s, ou_03_stage2_randinit 72s, ou_03b_stage2_randinit_torch 57s, ou_04_stage3 129s, ou_05_stage4 42s, ou_06_clean_scratch 2s, ou_07_stage5_fast 1811s, ou_08_stage5_ref 130s, ou_09_stage6 27s
+- 단계별 소요: 00_stage0 31s, ou_01_stage1 19s, ou_02_stage2 107s, ou_03_stage2_randinit 72s, ou_03b_stage2_randinit_torch 57s, ou_04_stage3 129s, ou_05_stage4 42s, ou_06_clean_scratch 2s, ou_07_stage5_fast 1811s, ou_08_stage5_ref 130s, ou_09_stage6 27s, ou_10_summary 1s, rw_01_stage1 13s, rw_02_stage2 138s, rw_03_stage2_randinit 76s, rw_03b_stage2_randinit_torch 62s, rw_04_stage3 139s, rw_05_stage4 47s, rw_06_clean_scratch 2s, rw_07_stage5_fast 1817s, rw_08_stage5_ref 138s, rw_09_stage6 26s

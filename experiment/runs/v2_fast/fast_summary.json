@@ -1,7 +1,8 @@
 {
   "model": "base",
   "noises_done": [
-    "ou"
+    "ou",
+    "rw"
   ],
   "q0": [
     {
@@ -134,6 +135,30 @@
       },
       "key": "like_random",
       "sentence": "분리는 입력·구조에서 오며, 학습된 표현이라는 근거 없음"
+    },
+    "rw": {
+      "summary": {
+        "layer": 11,
+        "t": 511,
+        "pretrained": 15.743694305419922,
+        "random_init": 10.240666389465332,
+        "random_init_torch": 6.161491870880127,
+        "input": 1.6903769969940186,
+        "pretrained_over_random": 1.5373700994317718,
+        "pretrained_over_random_torch": 2.5551757001946744,
+        "pretrained_over_input": 9.313717788053662,
+        "band_mean": {
+          "pretrained": 12.524072380626903,
+          "random_init": 8.518684359157787,
+          "random_init_torch": 4.907322252497954,
+          "input": 1.7375920449986177,
+          "pretrained_over_random": 1.4701885705112703,
+          "pretrained_over_random_torch": 2.5521194118140147,
+          "pretrained_over_input": 7.2077173791601155
+        }
+      },
+      "key": "like_random",
+      "sentence": "분리는 입력·구조에서 오며, 학습된 표현이라는 근거 없음"
     }
   },
   "fast": {
@@ -186,12 +211,66 @@
         "var_ratio": 0.818989562045313,
         "slope_mean": -0.06377784368726833
       }
+    },
+    "rw": {
+      "A_up": false,
+      "lambda_star": null,
+      "verdict": "no_effect",
+      "collapse_generic": null,
+      "ref_match": null,
+      "j_frac_positive_mean_at_star": null,
+      "j_var_ratio_mean_at_star": null,
+      "reversible": false,
+      "baseline": {
+        "n": 64,
+        "n_positive": 31,
+        "frac_positive": 0.484375,
+        "p_sign": 0.9006532462520334,
+        "frac_negative": 0.515625,
+        "p_sign_negative": 0.9006532462520334,
+        "var_ratio": 1.0,
+        "slope_mean": -0.0011341890749720753
+      },
+      "baseline_subset32": {
+        "n": 32,
+        "n_positive": 13,
+        "frac_positive": 0.40625,
+        "p_sign": 0.37708558747544885,
+        "frac_negative": 0.59375,
+        "p_sign_negative": 0.37708558747544885,
+        "var_ratio": 1.0,
+        "slope_mean": -0.007896461477707327
+      },
+      "ref": {
+        "n": 64,
+        "n_positive": 32,
+        "frac_positive": 0.5,
+        "p_sign": 1.0,
+        "frac_negative": 0.5,
+        "p_sign_negative": 1.0,
+        "var_ratio": 0.5220729412671199,
+        "slope_mean": -0.007998053266144308
+      },
+      "ref_subset32": {
+        "n": 32,
+        "n_positive": 17,
+        "frac_positive": 0.53125,
+        "p_sign": 0.860050065908581,
+        "frac_negative": 0.46875,
+        "p_sign_negative": 0.860050065908581,
+        "var_ratio": 0.5749283085476065,
+        "slope_mean": -0.010007869166546723
+      }
     }
   },
   "interpretation": {
     "ou": {
       "key": "specific_unlike_ref",
       "sentence": "방향 특이적 조정은 가능하나, 모델이 실제 추세 입력에 하는 계산과 다른 출력을 주입 (1차 OU 잠정 결론)"
+    },
+    "rw": {
+      "key": "no_effect",
+      "sentence": "해당 설정에서 인과적 사용의 증거 없음"
     }
   },
   "q1_ratio": 2.0,
@@ -211,7 +290,18 @@
       "ou_06_clean_scratch": 2.1,
       "ou_07_stage5_fast": 1810.6,
       "ou_08_stage5_ref": 130.4,
-      "ou_09_stage6": 26.6
+      "ou_09_stage6": 26.6,
+      "ou_10_summary": 0.6,
+      "rw_01_stage1": 13.1,
+      "rw_02_stage2": 138.0,
+      "rw_03_stage2_randinit": 76.5,
+      "rw_03b_stage2_randinit_torch": 61.9,
+      "rw_04_stage3": 138.7,
+      "rw_05_stage4": 47.2,
+      "rw_06_clean_scratch": 2.1,
+      "rw_07_stage5_fast": 1817.3,
+      "rw_08_stage5_ref": 137.6,
+      "rw_09_stage6": 25.9
     }
   }
 }

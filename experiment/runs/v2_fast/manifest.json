@@ -110,7 +110,7 @@
     "gpu_name": "NVIDIA GeForce RTX 4090",
     "driver": "580.178.04"
   },
-  "updated_utc": "2026-10-05T06:49:54+00:00",
+  "updated_utc": "2026-10-05T07:31:06+00:00",
   "noises": [
     "ou",
     "rw"
@@ -127,7 +127,18 @@
     "ou_07_stage5_fast": 1810.6,
     "ou_08_stage5_ref": 130.4,
     "ou_09_stage6": 26.6,
-    "ou_10_summary": 0.6
+    "ou_10_summary": 0.6,
+    "rw_01_stage1": 13.1,
+    "rw_02_stage2": 138.0,
+    "rw_03_stage2_randinit": 76.5,
+    "rw_03b_stage2_randinit_torch": 61.9,
+    "rw_04_stage3": 138.7,
+    "rw_05_stage4": 47.2,
+    "rw_06_clean_scratch": 2.1,
+    "rw_07_stage5_fast": 1817.3,
+    "rw_08_stage5_ref": 137.6,
+    "rw_09_stage6": 25.9,
+    "rw_10_summary": 0.6
   },
   "status": "running"
 }
