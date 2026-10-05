@@ -1,0 +1,22 @@
+{
+  "source": "v1 (0812, Colab) reports",
+  "ou": {
+    "input_ldr": 19.57,
+    "ldr_heldout": {"layer0_mid": 22.99, "layer1_mid": 29.27, "layer11_late": 23.76, "layer11_last": 23.52},
+    "null_ratio": 987,
+    "peak_t_range": [259, 350],
+    "cos_mean_median": 0.978,
+    "cos_lda_vs_median": 0.040,
+    "steer_A": {"lambda_up_min": 0.25, "frac_positive_at_up": 1.0, "var_ratio": 0.046},
+    "baseline_frac_positive": 0.469,
+    "ref_frac_positive": 0.0
+  },
+  "rw": {
+    "input_ldr": 2.22,
+    "null_ratio": 632,
+    "peak_t": 511,
+    "cos_mean_median": 0.986,
+    "cos_lda_vs_median": 0.022,
+    "ref_frac_positive": 0.531
+  }
+}

@@ -1,0 +1,14 @@
+# RunPod 실행 환경. RunPod/setup_runpod.sh 가 /workspace/venv-probe 에 설치한다 (이미지의 torch 는 쓰지 않는다).
+# 위 아홉 개는 Kronos-investing 이 같은 pod·같은 볼륨에서 검증한 핀이다 (requirements.txt + requirements-infer.txt).
+torch==2.14.1
+huggingface_hub==2.1.1
+einops==0.8.2
+safetensors==0.8.0
+tqdm==4.66.4
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.13.1
+matplotlib==3.10.0
+# 이 실험에만 필요한 것. 로컬 검증 venv(~/.venvs/kronos) 의 버전으로 고정했다.
+scikit-learn==1.9.0
+seaborn==0.13.2
