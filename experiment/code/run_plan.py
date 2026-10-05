@@ -57,8 +57,10 @@ def build_steps(plan: str, model: str, noises: list[str]) -> list[dict]:
         steps += [
             dict(name=f"{x}_01_stage1", stage="stage1", args=nz + ["--expect-fingerprint"]),
             dict(name=f"{x}_02_stage2", stage="stage2", args=nz + smoke, scratch=x),
-            dict(name=f"{x}_03_stage2_randinit", stage="stage2", scratch=x,
+            dict(name=f"{x}_03_stage2_randinit", stage="stage2", scratch=x + "_randinit",
                  args=nz + ["--random-init", "--positions", "bands"] + smoke),
+            dict(name=f"{x}_03b_stage2_randinit_torch", stage="stage2", scratch=x + "_randinit_torch",
+                 args=nz + ["--random-init", "--init", "torch", "--positions", "bands"] + smoke),
             dict(name=f"{x}_04_stage3", stage="stage3", args=nz + ["--controls"] + smoke),
             dict(name=f"{x}_05_stage4", stage="stage4", args=nz + smoke),
             dict(name=f"{x}_06_clean_scratch", clean=x),
@@ -78,7 +80,7 @@ def build_steps(plan: str, model: str, noises: list[str]) -> list[dict]:
 
 def activation_dirs(scratch: Path, noise: str) -> list[Path]:
     base = scratch / "activations" / CFG.tag
-    return [base / noise, base / f"{noise}_randinit"]
+    return [base / noise, base / f"{noise}_randinit", base / f"{noise}_randinit_torch"]
 
 
 def run_step(cmd: list[str], env: dict, log_path: Path) -> int:
@@ -134,9 +136,8 @@ def main() -> int:
         if done and "scratch" in s:
             # 활성화는 컨테이너 디스크에 있어 pod 가 바뀌면 사라진다. 마커가 있어도 이후 단계가
             # 아직 읽어야 하는데 파일이 없으면 다시 추출한다.
-            cleaned = (out / ".done" / f"{s['scratch']}_06_clean_scratch").exists()
-            variant = s["scratch"] + ("_randinit" if "--random-init" in s["args"] else "")
-            have = any((scratch / "activations" / CFG.tag / variant).glob("*/base/meta.json"))
+            cleaned = (out / ".done" / f"{s['name'].split('_')[0]}_06_clean_scratch").exists()
+            have = any((scratch / "activations" / CFG.tag / s["scratch"]).glob("*/base/meta.json"))
             done = cleaned or have
         if done:
             print(f"\n[{i:02d}/{len(steps)}] {s['name']}: 이미 끝남 (.done) — 건너뜀")

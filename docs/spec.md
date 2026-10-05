@@ -84,7 +84,7 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
 선택 규칙 (`stages/stage7_fast_summary.py`)
 
 - outline §8.2 (개입): 위 판정값을 그대로 쓴다. `generic_perturbation` → 1행, `direction_specific`이고 `ref_match` 거짓 → 2행, `direction_specific`이고 `ref_match` 참 → 3행, `no_effect` → 4행. `ambiguous`이거나 REF가 없으면 "해당 행 없음"으로 적고 수치만 보고한다.
-- outline §8.1 (표현): 마지막 층·t=511의 LDR 비율로 고른다. 비율이 [0.5, 2] 안이면 "비슷", 2를 넘으면 "더 큼"으로 본다 (`Q1_RATIO = 2`). `사전학습/무작위`가 비슷 → 1행, 더 크고 `사전학습/입력`이 비슷 → 2행, 둘 다 더 큼 → 3행. `사전학습/무작위`가 0.5 미만이거나, 2를 넘는데 `사전학습/입력`이 0.5 미만이면 "해당 행 없음". 이 임계는 위 표의 규칙과 달리 근거가 있는 값이 아니다. 표의 비율을 직접 본다.
+- outline §8.1 (표현): 마지막 층·t=511의 LDR 비율로 고른다. `사전학습/무작위`는 Kronos 자체 초기화 대조군의 값이다 (torch 기본 초기화는 참고 열이고 판정에 쓰지 않는다). 비율이 [0.5, 2] 안이면 "비슷", 2를 넘으면 "더 큼"으로 본다 (`Q1_RATIO = 2`). `사전학습/무작위`가 비슷 → 1행, 더 크고 `사전학습/입력`이 비슷 → 2행, 둘 다 더 큼 → 3행. `사전학습/무작위`가 0.5 미만이거나, 2를 넘는데 `사전학습/입력`이 0.5 미만이면 "해당 행 없음". 이 임계는 위 표의 규칙과 달리 근거가 있는 값이 아니다. 표의 비율을 직접 본다.
 
 ---
 
@@ -107,11 +107,12 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
 ### 3.3 `kexp/kronos_loader.py`
 - `load_kronos()`: `from_pretrained(..., revision=...)`로 핀을 전달한다. Kronos-base인데 핀이 None이면 예외를 낸다.
 - `set_determinism()`: `torch.backends.cuda.matmul.allow_tf32 = False`, `torch.backends.cudnn.allow_tf32 = False`. 모델이나 GPU 행렬 연산을 쓰는 stage(0, 2, 3, 5)가 시작할 때 호출한다. stage 4는 변경 없음(§3.8)이고 stage 1·6·7은 torch 연산이 없다.
-- `randomize_model(model, seed, tokenizer=None)`: 무작위 초기화 대조군용. 토크나이저는 건드리지 않는다.
+- `randomize_model(model, seed, tokenizer=None, init="kronos")`: 무작위 초기화 대조군용. 토크나이저는 건드리지 않는다.
   - `torch.manual_seed(seed)` 후 `reset_parameters()`가 있는 모든 하위 모듈에 호출한다. 난수열이 장치에 따라 달라지지 않도록 CPU에서 초기화한 뒤 원래 장치로 돌려보낸다.
   - `reset_parameters()`가 없는 모듈이 직접 가진 파라미터는 1차원 `weight` = 1, `bias` = 0, 2차원 이상 = N(0, 0.02²)로 초기화한다.
+  - `init="torch"`는 여기서 끝낸다 (PyTorch 기본 초기화). `init="kronos"`(기본)는 이어서 `model.apply(model._init_weights)`를 적용한다. Kronos가 학습을 시작할 때 쓰는 초기화다 (Linear는 xavier normal, Embedding은 std = d_model^-0.5).
   - 호출 전후 모델 파라미터 해시(`param_hash()`)가 바뀌었는지, 토크나이저 해시가 그대로인지 출력한다. 모델 해시가 그대로이거나 토크나이저 해시가 바뀌면 예외를 낸다.
-  - **알려진 한계 (base 구조에서 실측).** `nn.Embedding.reset_parameters()`는 N(0, 1)이라, Kronos 자체 초기화(`_init_weights`, std = d_model^-0.5 ≈ 0.035)보다 임베딩이 약 29배 크다. 그 결과 블록이 residual에 층당 약 1%만 기여하고(마지막 층 출력과 입력 임베딩의 코사인 0.999), 로컬 base 스모크에서 무작위 초기화 LDR이 층에 따라 거의 변하지 않았다(t=511에서 23.3 → 22.7, 표본 8개). 이 대조군은 "학습되지 않은 트랜스포머"보다 "위치별 토큰 임베딩"에 가깝다. Q1의 `사전학습/무작위` 비율을 읽을 때 감안한다. Kronos 자체 초기화로 바꾸려면 함수 끝에 `model.apply(model._init_weights)` 한 줄을 더하면 된다 (현재는 적용하지 않았다).
+  - **두 방식을 모두 돌리고, 판정에는 `kronos`만 쓴다 (2026-10-05 결정).** `torch` 방식은 임베딩이 N(0, 1)이라 Kronos 자체 초기화보다 약 29배 크고, base 구조에서 블록이 residual에 층당 약 1%만 기여한다 (마지막 층 출력과 입력 임베딩의 코사인 0.999, 실측). 스모크에서 이 대조군의 LDR은 층에 따라 거의 변하지 않았다. "학습되지 않은 트랜스포머"보다 "위치별 토큰 임베딩"에 가까운 대조군이라 참고 열로만 둔다. `kronos` 방식은 블록 기여가 층당 30~50%로 사전학습 모델과 비슷하다.
 
 ### 3.4 `kexp/intervene.py`
 - `build_random_payload(S_mat, layers, lam_by_layer, seed)` 추가. 레이어 i마다 `np.random.default_rng([seed, i])`로 `[T, D]` 가우시안을 뽑고, 행별로 `‖S_i^(t)‖`에 노름을 맞춘다. 반환 형식은 `build_payload(..., form="matrix")`와 같다. `cos(R_i^(t), S_i^(t))`의 레이어별 평균 절대값을 함께 반환한다.
@@ -125,16 +126,17 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
 
 ### 3.6 `stages/stage2_activations.py`
 - `--random-init`: `randomize_model()` 적용 후 추출한다 (seed는 `ControlCfg.random_init_seed`). 출력은 `activations/<tag>/<noise>_randinit/<model>[_smoke]/` 아래에 따로 쓴다. 1차의 `<noise>/<model>[_smoke]`와 같은 구조다.
+- `--init {kronos,torch}` (기본 `kronos`): `--random-init`의 초기화 방식. `torch`의 출력은 `<noise>_randinit_torch/` 아래에 쓴다.
 - `--positions bands`: `ControlCfg.band_positions` 위치만 저장한다 (`[N, 17, D]`). `--random-init`와 함께 쓴다.
 - 기존 전체 추출 경로는 변경하지 않는다. `meta.json`에 `positions`와 `random_init`을 기록하고 재개 판정에도 쓴다.
 
 ### 3.7 `stages/stage3_ldr.py`
 기존 계산은 그대로 두고 `--controls` 플래그로 아래를 추가한다. 출력은 `stage3_controls.json`, `figs/v2/stage3_controls_<noise>.png`.
 
-- (a) **무작위 초기화 LDR**: band 위치 × 12층, held-out LDR과 null(라벨 셔플). split·shrinkage는 기존과 같다. 활성화가 없거나 위치·표본 수가 맞지 않으면 (a)만 건너뛰고 경고한다.
+- (a) **무작위 초기화 LDR**: band 위치 × 12층, held-out LDR과 null(라벨 셔플). split·shrinkage는 기존과 같다. 활성화가 없거나 위치·표본 수가 맞지 않으면 (a)만 건너뛰고 경고한다. Kronos 자체 초기화(`random_init`, 판정 기준)와 PyTorch 기본 초기화(`random_init_torch`, 참고)를 각각 잰다.
 - (b) **사전학습 LDR**: 같은 band 위치 값을 같은 실행에서 계산한 전 위치 LDR(`ldr.npz`에 저장되는 값)에서 발췌한다.
 - (c) **입력 기준선**: 위치 t에서 정규화 close 경로 `x_norm[:, :t+1, close]`(차원 t+1)에 같은 LDA·held-out·null 절차를 적용한다. 위치 t에서 모델이 볼 수 있는 정보와 같은 범위다.
-- 요약 키 (`summary`): 마지막 층(base는 layer 11)·t=511의 `pretrained`, `random_init`, `input`과 비율 `pretrained_over_random`, `pretrained_over_input`. 같은 다섯 값의 band 평균(17개 위치 평균)은 `band_mean`에 넣는다.
+- 요약 키 (`summary`): 마지막 층(base는 layer 11)·t=511의 `pretrained`, `random_init`, `input`과 비율 `pretrained_over_random`, `pretrained_over_input`, 그리고 참고용 `random_init_torch`와 `pretrained_over_random_torch`. 같은 값들의 band 평균(17개 위치 평균)은 `band_mean`에 넣는다.
 - `--smoke`에서는 null 대비 판정과 무관하게 exit 0이다. 표본 8개로는 판정이 의미가 없고, 러너가 스모크를 끝까지 돌려야 하기 때문이다. 본 실행의 판정과 종료 코드는 1차와 같다.
 
 ### 3.8 `stages/stage4_steering_vector.py`
@@ -168,7 +170,7 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
 - 재개: 단계가 끝나면 `<OUT>/.done/<step>` 마커를 남긴다. 같은 RUN_ID로 다시 실행하면 마커가 있는 단계는 건너뛴다. 단, Stage 2 단계는 마커가 있어도 그 노이즈의 scratch 정리가 아직 안 끝났고 활성화가 없으면 다시 실행한다 (컨테이너 디스크는 pod가 바뀌면 사라진다).
 - 노이즈 하나가 끝날 때마다 `stage7_fast_summary.py`를 실행한 뒤 `bash RunPod/push_meta.sh <OUT>`를 호출한다. 현재 브랜치가 `results/*`일 때만 호출하고, 실패해도 계속 진행한다. push는 `--plan fast`에서만 한다.
 - 단계가 끝날 때마다 `manifest.json`(단계별 소요 시간, 상태)을 갱신한다.
-- 단계 이름(로그·마커): `00_stage0`, `<X>_01_stage1`, `<X>_02_stage2`, `<X>_03_stage2_randinit`, `<X>_04_stage3`, `<X>_05_stage4`, `<X>_06_clean_scratch`, `<X>_07_stage5_fast`, `<X>_08_stage5_ref`, `<X>_09_stage6`, `<X>_10_summary`.
+- 단계 이름(로그·마커): `00_stage0`, `<X>_01_stage1`, `<X>_02_stage2`, `<X>_03_stage2_randinit`, `<X>_03b_stage2_randinit_torch`, `<X>_04_stage3`, `<X>_05_stage4`, `<X>_06_clean_scratch`, `<X>_07_stage5_fast`, `<X>_08_stage5_ref`, `<X>_09_stage6`, `<X>_10_summary`.
 
 **fast plan** (노이즈 X ∈ [ou, rw] 순서)
 
@@ -177,10 +179,11 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
 | 0 | `stage0` | 1회. L=12, d=832 확인 |
 | 1 | `stage1 --noise X --expect-fingerprint` | |
 | 2 | `stage2 --noise X` | 전체 활성화 → scratch |
-| 3 | `stage2 --noise X --random-init --positions bands` | |
+| 3 | `stage2 --noise X --random-init --positions bands` | Kronos 자체 초기화 (판정 기준) |
+| 3b | `stage2 --noise X --random-init --init torch --positions bands` | PyTorch 기본 초기화 (참고) |
 | 4 | `stage3 --noise X --controls` | |
 | 5 | `stage4 --noise X` | |
-| 6 | scratch 정리 | X의 전체 활성화와 randinit 활성화 삭제 |
+| 6 | scratch 정리 | X의 전체 활성화와 randinit 활성화(둘 다) 삭제 |
 | 7 | `stage5 --noise X --arms fast --lambdas fast --n-eval 64 --eval-batch 32` | |
 | 8 | `stage5 --noise X --reference-trend --n-eval 64 --eval-batch 32` | |
 | 9 | `stage6 --noise X` | |
@@ -196,7 +199,7 @@ Fast track = **pod 1대, RUN_ID 1개(`v2_fast`), OU → RW 순차 실행**으로
   1. **Q0 재현표 (OU)**: 항목, v1 값, v2 값, outline §6 기준 판정. Stage 5 지표는 subset32를 쓴다.
      - `data_fingerprint` 완전 일치 / 입력단 LDR 소수 둘째 자리까지 / held-out LDR 네 항목 상대오차 5% 이내 / null 대비 배율 같은 자릿수(|log10 비| < 0.5) / 평활 정점 위치의 레이어 중앙값이 v1 범위 안 / 코사인 두 항목 차이 0.01 이내
      - A 팔(subset32): λ=0.25에서 양의 비율 > 0.5이고 p < 0.01, 상향되는 최소 λ가 0.25, 최소 분산비가 같은 자릿수 / REF 양의 기울기 수 ±2/32 / 기준선 양의 비율은 판정 없이 참고 (v1도 GPU에 따라 0.594 / 0.469로 갈렸다)
-  2. **Q1 표 (노이즈별)**: 입력 기준선 / 무작위 초기화 / 사전학습 LDR (layer 11·t=511, band 평균), 비율, outline §8.1에서 선택한 해석 행.
+  2. **Q1 표 (노이즈별)**: 입력 기준선 / 무작위 초기화(Kronos 초기화, 그리고 참고 열로 torch 기본) / 사전학습 LDR (layer 11·t=511, band 평균), 비율, outline §8.1에서 선택한 해석 행.
   3. **Q2·Q3 표 (노이즈별)**: λ별 A, J(seed별, pooled), L의 양(음)의 기울기 비율 / 분산비 / p.
   4. **Q4**: λ*에서 A vs REF의 KS, REF 양의 기울기 비율.
   5. §2.2 판정값과 outline §8.2에서 선택한 해석 행.
@@ -228,6 +231,7 @@ CLI: `python -m kexp.runmeta {write-manifest,checksum-write,checksum-verify,veri
 | `runpod.sh` | `checksum-write`를 wrap-up으로 (§3.13) | 체크섬 대상인 `cloud_run.json`이 끝에 한 번 더 바뀐다 |
 | `local.sh` | 커밋이 없는 저장소에서도 `push-code`·`status` 동작 | 이 레포의 첫 push |
 | `stage7` | outline §8.1 문장의 선택 임계 `Q1_RATIO` (§2.2) | spec에 수치 규칙이 없었다 |
+| `randomize_model`, `stage2`, `stage3`, 러너 | 초기화 방식 둘(`kronos` 판정 기준, `torch` 참고) (§3.3) | 원래 명세의 `reset_parameters()`만으로는 대조군이 토큰 임베딩에 가까웠다 |
 
 ---
 
@@ -335,7 +339,7 @@ Q0 재현 판정은 outline §6 기준을 따른다. Stage 5 항목은 subset32�
 
 ### 6.1 단위 테스트 (`experiment/code/tests/`, pytest)
 
-`test_kexp.py`(항목 1, 2, 3, 4, 5, 7)와 `test_stages.py`(항목 6, 8)에 11개 테스트로 구현했다. 실행: `~/.venvs/kronos/bin/python -m pytest experiment/code/tests -q`
+`test_kexp.py`(항목 1, 2, 3, 4, 5, 7)와 `test_stages.py`(항목 6, 8)에 12개 테스트로 구현했다. 실행: `~/.venvs/kronos/bin/python -m pytest experiment/code/tests -q`
 
 1. `paths`: 환경변수 설정/미설정 시 루트가 올바른지
 2. 랜덤 payload: 위치별 노름 = S 노름 (상대오차 < 1e-5), 같은 seed는 동일하고 다른 seed는 다름, `|cos(R, S)|` 평균 < 0.1

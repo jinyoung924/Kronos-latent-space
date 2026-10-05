@@ -135,6 +135,17 @@ def test_randomize_model():
     assert kl.param_hash(kl.randomize_model(_tiny_kronos(), 1)) != h0
 
 
+def test_randomize_model_init_modes():
+    """kronos = Kronos 자체 초기화 (임베딩 std = d_model^-0.5), torch = PyTorch 기본 (std 1)."""
+    k = kl.randomize_model(_tiny_kronos(), 0, init="kronos")
+    t = kl.randomize_model(_tiny_kronos(), 0, init="torch")
+    d = k.d_model
+    assert abs(k.embedding.emb_s1.weight.std().item() - d ** -0.5) < 0.2 * d ** -0.5
+    assert abs(t.embedding.emb_s1.weight.std().item() - 1.0) < 0.2
+    assert kl.param_hash(k) != kl.param_hash(t)
+    assert all(torch.all(m.weight == 1.0) for m in k.modules() if type(m).__name__ == "RMSNorm")
+
+
 # 7. runmeta 체크섬 --------------------------------------------------------------
 
 def test_checksum_roundtrip(tmp_path):

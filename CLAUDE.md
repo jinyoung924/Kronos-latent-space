@@ -36,7 +36,7 @@ TSFM인 **Kronos**에 **Moment Steering 논문**(Wiliński et al., ICML 2025, ar
 - **코드: fast track 구현 완료, 로컬 검증 통과, origin `main`에 push됨 (2026-10-05).** pod에서는 아직 아무것도 돌리지 않았다.
 - `docs/spec.md`와 `docs/outline.md`는 2026-10-05에 현재 코드에 맞춰 갱신했다. outline의 **[fast]** / **[Tier 2]** 표시가 구현 여부다.
 - 로컬 검증 (macOS, Kronos-small — **코드 버그 검출용이며 과학적 결론이 아니다**)
-  - 단위 테스트 11개 통과 (`experiment/code/tests`, spec §6.1의 8항목)
+  - 단위 테스트 12개 통과 (`experiment/code/tests`, spec §6.1의 8항목)
   - `run_plan.py --plan smoke --run-id local_smoke --model small` 끝까지 + `verify-run` 통과, `fast_summary.md` 생성
   - 비스모크 fast 경로(5팔 × 5λ + REF = 26키, REF 이어 쓰기, 재개)를 small·축소 설정으로 확인
   - `push_meta.sh` 화이트리스트, `local.sh`의 list·merge·verify를 임시 bare 저장소로 확인
@@ -80,7 +80,7 @@ experiment/code/
 | `kronos_loader.py` | revision 전달(base인데 핀 없으면 실패), `set_determinism()`, `randomize_model()` |
 | `intervene.py` | `build_random_payload()`. 역방향은 `build_payload(..., -lam, ...)` |
 | `stage1` | `--expect-fingerprint`(불일치 exit 2), `--write-expected` |
-| `stage2` | `--random-init`(출력 `<noise>_randinit`), `--positions bands`(17개 위치만 저장) |
+| `stage2` | `--random-init`(출력 `<noise>_randinit`), `--init {kronos,torch}`, `--positions bands`(17개 위치만 저장) |
 | `stage3` | `--controls` → `stage3_controls.json`, `figs/v2/stage3_controls_<noise>.png` |
 | `stage4` | 변경 없음 (1차 파일과 동일) |
 | `stage5` | `--arms fast`(A, J×3, L), `--lambdas fast`, `--eval-batch`, 결과에 `subset32`·`cos_random_vs_S` |
@@ -182,7 +182,7 @@ bash -n RunPod/*.sh && bash RunPod/local.sh status
 - **"분산비"(`var_ratio`)는 표준편차의 비**다(개입 후 / 기준선).
 - **판정 규칙(spec §2.2)은 사전 고정이다. 결과를 본 뒤 바꾸지 않는다.** `fast_summary.md`의 해석 문장은 outline §8 표에서 선택만 한다.
 - Q1의 문장 선택 기준(`stage7`의 `Q1_RATIO = 2`, 마지막 층·t=511의 비율)은 spec에 없는 값이다. 표의 비율을 직접 본다.
-- **무작위 초기화 대조군의 한계.** `randomize_model()`은 spec대로 `reset_parameters()`를 쓴다. 이 방식은 임베딩을 N(0, 1)로 만들어(Kronos 자체 초기화의 std는 0.035) base 구조에서 블록이 residual에 층당 약 1%만 기여한다(마지막 층 출력과 입력 임베딩의 코사인 0.999, 실측). 즉 대조군이 "학습 안 된 트랜스포머"보다 "위치별 토큰 임베딩"에 가깝다. Q1의 `사전학습/무작위` 비율을 읽을 때 감안한다. Kronos 자체 초기화로 바꾸려면 `randomize_model()` 끝에 `model.apply(model._init_weights)` 한 줄을 더한다.
+- **무작위 초기화 대조군은 둘이다.** 판정 기준은 Kronos 자체 초기화(`randomize_model(init="kronos")`, `<noise>_randinit`)이고, PyTorch 기본 초기화(`init="torch"`, `<noise>_randinit_torch`)는 참고 열이다. torch 방식은 임베딩이 N(0, 1)이라(Kronos 자체는 std 0.035) base 구조에서 블록이 residual에 층당 약 1%만 기여해 "위치별 토큰 임베딩"에 가까운 대조군이 된다. 원래 spec은 torch 방식만 적었고, 2026-10-05에 사용자가 둘 다 돌리되 Kronos 방식으로 판정하기로 정했다.
 - **small 결과로 base 실험을 바꾸지 않는다.** 로컬은 버그 검출용이다.
 - "모델이 개념을 이해한다/못한다"는 표현은 쓰지 않는다 (outline §8).
 
@@ -190,7 +190,6 @@ bash -n RunPod/*.sh && bash RunPod/local.sh status
 
 ## 6. 다음 할 일
 
-1. (pod를 띄우기 전에 결정) 무작위 초기화 대조군을 spec대로 둘지, Kronos 자체 초기화로 바꿀지 — §5 "수치·해석상 주의"와 spec §3.3의 알려진 한계
 2. 템플릿 `kronos-probe` 배포: `kronos-infer` 복제, Container Disk 60GB, PAT에 이 레포 추가 (`RunPod/README.md` §1)
 3. pod: `RUN_ID=v2_fast bash RunPod/runpod.sh` → 로컬 `watch` → `merge`
 4. `fast_summary.md`로 Q0~Q4 확인. 실측 시간·비용을 `RunPod/README.md` §5에 기록

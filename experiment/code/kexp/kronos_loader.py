@@ -70,13 +70,23 @@ def param_hash(module) -> str:
     return h.hexdigest()[:16]
 
 
-def randomize_model(model, seed: int, tokenizer=None):
+def randomize_model(model, seed: int, tokenizer=None, init: str = "kronos"):
     """무작위 초기화 대조군: 같은 구조, 학습되지 않은 가중치. 토크나이저는 건드리지 않는다.
 
-    reset_parameters() 가 있는 하위 모듈은 그것을 호출하고, 없는 모듈이 직접 가진
+    먼저 reset_parameters() 가 있는 하위 모듈은 그것을 호출하고, 없는 모듈이 직접 가진
     파라미터는 1차원 weight = 1, bias = 0, 2차원 이상 = N(0, 0.02^2) 로 채운다.
     난수열이 장치에 따라 달라지지 않도록 CPU 에서 초기화한 뒤 원래 장치로 돌려보낸다.
+
+    init
+        "torch"  : 위에서 끝낸다 (PyTorch 기본 초기화). 임베딩이 N(0, 1) 이라 블록 출력보다
+                   훨씬 커서, base 구조에서 블록이 residual 에 층당 약 1% 만 기여한다. 대조군이
+                   "학습 안 된 트랜스포머" 보다 "위치별 토큰 임베딩" 에 가깝다. 참고용이다.
+        "kronos" : 이어서 Kronos 가 학습을 시작할 때 쓰는 초기화(model._init_weights:
+                   Linear 는 xavier normal, Embedding 은 std = d_model^-0.5)를 적용한다.
+                   블록 기여가 층당 30~50% 로 사전학습 모델과 비슷하다. 판정 기준이다.
     """
+    if init not in ("kronos", "torch"):
+        raise ValueError(f"알 수 없는 init: {init}")
     device = next(model.parameters()).device
     before = param_hash(model)
     tok_before = param_hash(tokenizer) if tokenizer is not None else None
@@ -94,9 +104,11 @@ def randomize_model(model, seed: int, tokenizer=None):
                     p.zero_()
                 else:
                     p.fill_(1.0)
+        if init == "kronos":
+            model.apply(model._init_weights)
     model.to(device).eval()
     after = param_hash(model)
-    print(f"  randomize_model(seed={seed}): 모델 해시 {before} -> {after} "
+    print(f"  randomize_model(seed={seed}, init={init}): 모델 해시 {before} -> {after} "
           f"({'바뀜' if before != after else '안 바뀜 — 오류'})")
     if tokenizer is not None:
         tok_after = param_hash(tokenizer)

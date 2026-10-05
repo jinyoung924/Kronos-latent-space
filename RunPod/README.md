@@ -89,7 +89,7 @@ RUN_ID=v2_fast bash RunPod/runpod.sh
 어떤 경로로 끝나도 상태를 cloud_run.json에 적고 push한다. 실패하면 pod는 그대로 남으니 `logs/runpod_<RUN_ID>.log`와 `experiment/runs/<RUN_ID>/logs/`를 본다.
 
 `run_plan.py`의 fast 계획 (노이즈 X ∈ [ou, rw] 순서, `docs/spec.md` §3.11):
-stage0 → [stage1 `--expect-fingerprint` → stage2 → stage2 `--random-init --positions bands` → stage3 `--controls` → stage4 → scratch 정리 → stage5 `--arms fast --lambdas fast --n-eval 64 --eval-batch 32` → stage5 `--reference-trend` → stage6 → stage7 요약 + 중간 push] × 노이즈.
+stage0 → [stage1 `--expect-fingerprint` → stage2 → stage2 `--random-init --positions bands` (Kronos 초기화, 이어서 `--init torch`로 한 번 더) → stage3 `--controls` → stage4 → scratch 정리 → stage5 `--arms fast --lambdas fast --n-eval 64 --eval-batch 32` → stage5 `--reference-trend` → stage6 → stage7 요약 + 중간 push] × 노이즈.
 
 ### 1.4 환경변수 (스크립트 knob)
 

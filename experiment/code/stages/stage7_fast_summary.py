@@ -194,14 +194,17 @@ def main(args) -> int:
             key, sent = q1_select(s)
             doc["q1"][n] = {"summary": s, "key": key, "sentence": sent}
             b = s["band_mean"]
-            md += ["| held-out LDR | 입력 기준선 | 무작위 초기화 | 사전학습 | 사전학습/무작위 | 사전학습/입력 |",
-                   "|---|---|---|---|---|---|",
-                   f"| layer {s['layer']}, t={s['t']} | {f(s['input'], '.2f')} | {f(s['random_init'], '.2f')} "
-                   f"| {f(s['pretrained'], '.2f')} | {f(s['pretrained_over_random'], '.2f')} "
-                   f"| {f(s['pretrained_over_input'], '.2f')} |",
-                   f"| layer {s['layer']}, band 평균 | {f(b['input'], '.2f')} | {f(b['random_init'], '.2f')} "
-                   f"| {f(b['pretrained'], '.2f')} | {f(b['pretrained_over_random'], '.2f')} "
-                   f"| {f(b['pretrained_over_input'], '.2f')} |", "",
+            md += ["| held-out LDR | 입력 기준선 | 무작위 (Kronos 초기화) | 무작위 (torch 기본, 참고) | 사전학습 "
+                   "| 사전학습/무작위 | 사전학습/무작위(torch, 참고) | 사전학습/입력 |",
+                   "|---|---|---|---|---|---|---|---|"]
+            for label, d in ((f"layer {s['layer']}, t={s['t']}", s), (f"layer {s['layer']}, band 평균", b)):
+                md.append(f"| {label} | {f(d['input'], '.2f')} | {f(d['random_init'], '.2f')} "
+                          f"| {f(d.get('random_init_torch'), '.2f')} | {f(d['pretrained'], '.2f')} "
+                          f"| {f(d['pretrained_over_random'], '.2f')} "
+                          f"| {f(d.get('pretrained_over_random_torch'), '.2f')} "
+                          f"| {f(d['pretrained_over_input'], '.2f')} |")
+            md += ["", "판정에는 Kronos 자체 초기화 대조군의 비율(사전학습/무작위)만 쓴다. torch 기본 초기화는 "
+                   "블록이 residual 에 거의 기여하지 않아 토큰 임베딩에 가까운 대조군이라 참고로만 둔다.", "",
                    f"해석 (outline 8.1, t={s['t']} 기준, 비율 {1/Q1_RATIO:g}~{Q1_RATIO:g} 을 '비슷'으로 봄): **{sent}**", ""]
         else:
             md += ["stage3_controls.json 이 없다.", ""]

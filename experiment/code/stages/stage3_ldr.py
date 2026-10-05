@@ -208,7 +208,8 @@ def run_controls(cfg, args, res, idx_tr, idx_te, device, res_dir: Path, fig_dir:
                  N: int, T: int, L: int) -> dict:
     """대조군 (spec 3.7): 같은 band 위치에서 같은 LDA / held-out / null 절차로 세 값을 잰다.
 
-        (a) 무작위 초기화  stage2 --random-init --positions bands 의 활성화
+        (a) 무작위 초기화  stage2 --random-init --positions bands 의 활성화. 두 가지를 읽는다:
+                           Kronos 자체 초기화(판정 기준)와 PyTorch 기본 초기화(참고)
         (b) 사전학습       방금 계산한 전 위치 LDR 에서 band 위치만 발췌
         (c) 입력 기준선    위치 t 까지의 정규화 close 경로 x_norm[:, :t+1, close] (차원 t+1).
                            위치 t 에서 모델이 볼 수 있는 정보와 같은 범위다.
@@ -218,26 +219,27 @@ def run_controls(cfg, args, res, idx_tr, idx_te, device, res_dir: Path, fig_dir:
 
     pre = {"ldr_test": res["ldr_test"][:, bands], "null_test": res["ldr_null_test"][:, bands]}
 
-    rnd = None
-    variant = f"{args.noise}_randinit/{args.model}" + ("_smoke" if args.smoke else "")
-    rdir = paths.activations_dir(cfg.tag, variant)
-    if not (rdir / "base" / "meta.json").exists():
-        print(f"  [경고] 무작위 초기화 활성화가 없다: {rdir}. (a) 를 건너뛴다.")
-    else:
+    def random_init_ldr(suffix: str):
+        rdir = paths.activations_dir(
+            cfg.tag, f"{args.noise}{suffix}/{args.model}" + ("_smoke" if args.smoke else ""))
+        if not (rdir / "base" / "meta.json").exists():
+            print(f"  [경고] 무작위 초기화 활성화가 없다: {rdir}. 건너뛴다.")
+            return None
         rmeta = A.read_meta(rdir / "base")
         if rmeta.get("positions") != bands or rmeta["n"] != N:
-            print(f"  [경고] 무작위 초기화 활성화의 위치·표본 수가 다르다 "
-                  f"(n={rmeta['n']} vs {N}). (a) 를 건너뛴다.")
-        else:
-            rnd = {k: np.zeros((L, len(bands))) for k in ("ldr_test", "null_test")}
-            for i in range(L):
-                a = np.load(A.layer_path(rdir / "base", i), mmap_mode="r")
-                b = np.load(A.layer_path(rdir / "trend", i), mmap_mode="r")
-                rnd["ldr_test"][i] = LD.ldr_for_layer(a, b, idx_tr, idx_te, eps, device,
-                                                      args.chunk)["test"]
-                rnd["null_test"][i] = LD.ldr_for_layer(a, b, idx_tr, idx_te, eps, device, args.chunk,
-                                                       shuffle_labels=True,
-                                                       seed=cfg.data.seed + i)["test"]
+            print(f"  [경고] {rdir.parent.name}: 위치·표본 수가 다르다 (n={rmeta['n']} vs {N}). 건너뛴다.")
+            return None
+        out = {k: np.zeros((L, len(bands))) for k in ("ldr_test", "null_test")}
+        for i in range(L):
+            a = np.load(A.layer_path(rdir / "base", i), mmap_mode="r")
+            b = np.load(A.layer_path(rdir / "trend", i), mmap_mode="r")
+            out["ldr_test"][i] = LD.ldr_for_layer(a, b, idx_tr, idx_te, eps, device, args.chunk)["test"]
+            out["null_test"][i] = LD.ldr_for_layer(a, b, idx_tr, idx_te, eps, device, args.chunk,
+                                                   shuffle_labels=True, seed=cfg.data.seed + i)["test"]
+        return out
+
+    rnd = random_init_ldr("_randinit")              # Kronos 자체 초기화 — 판정 기준
+    rnd_t = random_init_ldr("_randinit_torch")      # PyTorch 기본 초기화 — 참고
 
     data_dir = paths.data_dir(cfg.tag, args.noise)
     close = {}
@@ -258,35 +260,43 @@ def run_controls(cfg, args, res, idx_tr, idx_te, device, res_dir: Path, fig_dir:
     summ = {"layer": last, "t": T - 1,
             "pretrained": float(pre["ldr_test"][last, j]),
             "random_init": float(rnd["ldr_test"][last, j]) if rnd else None,
+            "random_init_torch": float(rnd_t["ldr_test"][last, j]) if rnd_t else None,
             "input": float(inp["ldr_test"][j])}
     band = {"pretrained": float(pre["ldr_test"][last].mean()),
             "random_init": float(rnd["ldr_test"][last].mean()) if rnd else None,
+            "random_init_torch": float(rnd_t["ldr_test"][last].mean()) if rnd_t else None,
             "input": float(inp["ldr_test"].mean())}
     for d in (summ, band):
         d["pretrained_over_random"] = ratio(d["pretrained"], d["random_init"])
+        d["pretrained_over_random_torch"] = ratio(d["pretrained"], d["random_init_torch"])
         d["pretrained_over_input"] = ratio(d["pretrained"], d["input"])
     summ["band_mean"] = band
 
     print(f"  held-out LDR, layer {last}  (N={N}, band 위치 {len(bands)}개)")
-    print(f"  {'t':>5} {'입력 기준선':>11} {'무작위 초기화':>12} {'사전학습':>10}")
+    print(f"  {'t':>5} {'입력 기준선':>11} {'무작위(Kronos)':>14} {'무작위(torch)':>13} {'사전학습':>10}")
     for jj, t in enumerate(bands):
-        r = f"{rnd['ldr_test'][last, jj]:>12.2f}" if rnd else f"{'-':>12}"
-        print(f"  {t:>5} {inp['ldr_test'][jj]:>11.2f} {r} {pre['ldr_test'][last, jj]:>10.2f}")
+        r = f"{rnd['ldr_test'][last, jj]:>14.2f}" if rnd else f"{'-':>14}"
+        rt = f"{rnd_t['ldr_test'][last, jj]:>13.2f}" if rnd_t else f"{'-':>13}"
+        print(f"  {t:>5} {inp['ldr_test'][jj]:>11.2f} {r} {rt} {pre['ldr_test'][last, jj]:>10.2f}")
     fmt = lambda v: "-" if v is None else f"{v:.2f}"                      # noqa: E731
-    print(f"  t={T-1}: 사전학습/무작위 {fmt(summ['pretrained_over_random'])}, "
-          f"사전학습/입력 {fmt(summ['pretrained_over_input'])}")
-    print(f"  band 평균: 사전학습/무작위 {fmt(band['pretrained_over_random'])}, "
-          f"사전학습/입력 {fmt(band['pretrained_over_input'])}")
+    for label, d in ((f"t={T-1}", summ), ("band 평균", band)):
+        print(f"  {label}: 사전학습/무작위(Kronos, 판정 기준) {fmt(d['pretrained_over_random'])}, "
+              f"사전학습/무작위(torch, 참고) {fmt(d['pretrained_over_random_torch'])}, "
+              f"사전학습/입력 {fmt(d['pretrained_over_input'])}")
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     axes[0].plot(bands, pre["ldr_test"][last], "o-", color=RED, label=f"pretrained (layer {last})")
     if rnd:
-        axes[0].plot(bands, rnd["ldr_test"][last], "s--", color=GREY, label=f"random init (layer {last})")
+        axes[0].plot(bands, rnd["ldr_test"][last], "s--", color=GREY, label=f"random init, Kronos (layer {last})")
+    if rnd_t:
+        axes[0].plot(bands, rnd_t["ldr_test"][last], "x:", color="0.75", label=f"random init, torch default (layer {last})")
     axes[0].plot(bands, inp["ldr_test"], "^-.", color=BLUE, label="input baseline (close prefix)")
     axes[0].set_xlabel("Token position t"); axes[0].set_title("held-out LDR at band positions")
     axes[1].plot(range(L), pre["ldr_test"][:, j], "o-", color=RED, label="pretrained")
     if rnd:
-        axes[1].plot(range(L), rnd["ldr_test"][:, j], "s--", color=GREY, label="random init")
+        axes[1].plot(range(L), rnd["ldr_test"][:, j], "s--", color=GREY, label="random init, Kronos")
+    if rnd_t:
+        axes[1].plot(range(L), rnd_t["ldr_test"][:, j], "x:", color="0.75", label="random init, torch default")
     axes[1].axhline(inp["ldr_test"][j], color=BLUE, ls="-.", label="input baseline")
     axes[1].set_xlabel("Layer"); axes[1].set_title(f"held-out LDR at the last token t={T-1}")
     for ax in axes:
@@ -300,6 +310,7 @@ def run_controls(cfg, args, res, idx_tr, idx_te, device, res_dir: Path, fig_dir:
     out = {"model": args.model, "noise": args.noise, "N": N, "band_positions": bands,
            "pretrained": {k: v.tolist() for k, v in pre.items()},
            "random_init": {k: v.tolist() for k, v in rnd.items()} if rnd else None,
+           "random_init_torch": {k: v.tolist() for k, v in rnd_t.items()} if rnd_t else None,
            "input": {k: v.tolist() for k, v in inp.items()},
            "summary": summ}
     (res_dir / "stage3_controls.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))

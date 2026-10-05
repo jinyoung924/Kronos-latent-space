@@ -46,8 +46,9 @@ def main(args) -> int:
     # 스모크 산출물은 본 실행과 절대 섞이면 안 된다. 같은 디렉토리를 쓰면
     # 8샘플짜리 meta.json 때문에 본 실행이 통째로 건너뛰어진다.
     # 무작위 초기화 대조군은 <noise>_randinit 아래에 따로 둔다.
-    variant = (args.noise + ("_randinit" if args.random_init else "")
-               + f"/{args.model}" + ("_smoke" if args.smoke else ""))
+    # init 이 torch(참고용 대조군)면 <noise>_randinit_torch 로 나눈다.
+    suffix = "" if not args.random_init else ("_randinit" if args.init == "kronos" else "_randinit_torch")
+    variant = args.noise + suffix + f"/{args.model}" + ("_smoke" if args.smoke else "")
     out_base = paths.activations_dir(cfg.tag, variant)
     positions = list(cfg.control.band_positions) if args.positions == "bands" else None
 
@@ -76,7 +77,7 @@ def main(args) -> int:
     spec = kl.describe(tokenizer, model)
     print(f"  device={device}  L={spec['n_layers']}  d_model={spec['d_model']}")
     if args.random_init:
-        kl.randomize_model(model, cfg.control.random_init_seed, tokenizer)
+        kl.randomize_model(model, cfg.control.random_init_seed, tokenizer, init=args.init)
 
     section("3. 추출")
     stats = {}
@@ -94,7 +95,8 @@ def main(args) -> int:
                     and prev.get("config_hash") == cfg.activation_hash()
                     and prev.get("data_fingerprint") == fp
                     and prev.get("positions") == positions
-                    and bool(prev.get("random_init")) == args.random_init)
+                    and bool(prev.get("random_init")) == args.random_init
+                    and prev.get("random_init_mode") == (args.init if args.random_init else None))
             if same:
                 print(f"  [{cls}] 동일 설정·동일 데이터의 산출물이 있다 (n={prev['n']}). 건너뛴다.")
                 stats[cls] = prev
@@ -113,6 +115,7 @@ def main(args) -> int:
         st["data_fingerprint"] = fp
         st["random_init"] = args.random_init
         st["random_init_seed"] = cfg.control.random_init_seed if args.random_init else None
+        st["random_init_mode"] = args.init if args.random_init else None
         (out_root / "meta.json").write_text(json.dumps(st, indent=2, ensure_ascii=False))
         stats[cls] = st
         n_pos = st["T"] if positions is None else len(positions)
@@ -182,6 +185,9 @@ if __name__ == "__main__":
     p.add_argument("--smoke-n", type=int, default=8)
     p.add_argument("--random-init", action="store_true",
                    help="무작위 초기화 모델로 추출한다 (대조군, 출력은 <noise>_randinit)")
+    p.add_argument("--init", default="kronos", choices=["kronos", "torch"],
+                   help="--random-init 의 초기화 방식. kronos = Kronos 자체 초기화 (판정 기준), "
+                        "torch = PyTorch 기본 (참고용, 출력은 <noise>_randinit_torch)")
     p.add_argument("--positions", default="all", choices=["all", "bands"],
                    help="bands = ControlCfg.band_positions 위치만 저장 (--random-init 와 함께)")
     raise SystemExit(main(p.parse_args()))
